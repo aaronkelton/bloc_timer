@@ -197,7 +197,7 @@ class Actions extends StatelessWidget {
         if (state.runtimeType == TimerInitial) {
           buttons.add(playButton(context));
         }
-        if (state.runtimeType == TimerRunInProgress) {
+        if (state.runtimeType == TimerRunInProgress || state.runtimeType == TimerRunPaused) {
           buttons.add(pauseButton(context));
           buttons.add(resetButton(context));
         }
