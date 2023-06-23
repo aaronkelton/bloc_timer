@@ -90,11 +90,16 @@ class TimerStarted extends TimerEvent {
 
   TimerStarted(this.duration);
 }
+
 class TimerPaused extends TimerEvent {
   // this event doesn't accept a duration !!!
   // so I guess we don't need to pass the duration from UI to the event space
   // this is because we have access to the duration via state inside the Bloc
   TimerPaused();
+}
+
+class TimerResumed extends TimerEvent {
+  TimerResumed();
 }
 
 class _TimerTicked extends TimerEvent {
@@ -107,6 +112,7 @@ class TimerBloc extends Bloc<TimerEvent, TimerState> {
   TimerBloc() : super(TimerInitial(60)) {
     on<TimerStarted>(_onStarted);
     on<TimerPaused>(_onPaused);
+    on<TimerResumed>(_onResumed);
     on<_TimerTicked>(_onTicked);
   }
 
@@ -133,6 +139,11 @@ class TimerBloc extends Bloc<TimerEvent, TimerState> {
     _tickerSubscription?.pause();
   }
 
+  _onResumed(event, emit) {
+    emit(TimerRunInProgress(state.duration));
+    _tickerSubscription?.resume();
+  }
+
   _onTicked(event, emit) {
     emit(TimerRunInProgress(event.duration));
   }
@@ -150,12 +161,14 @@ class TimerInitial extends TimerState {
   @override
   String toString() => 'TimerInitial { duration: $duration }';
 }
+
 class TimerRunInProgress extends TimerState {
   TimerRunInProgress(super.duration);
 
   @override
   String toString() => 'TimerRunInProgress { duration: $duration }';
 }
+
 class TimerRunPaused extends TimerState {
   TimerRunPaused(super.duration);
 
@@ -166,14 +179,17 @@ class TimerRunPaused extends TimerState {
 class Actions extends StatelessWidget {
   const Actions({super.key});
 
-  Widget playButton(BuildContext context) {
+  Widget playButton(BuildContext context, TimerState state) {
     return FloatingActionButton(
       child: const Icon(Icons.play_arrow),
       onPressed: () {
-        context.read<TimerBloc>().add(TimerStarted(60));
+        state.runtimeType == TimerInitial
+            ? context.read<TimerBloc>().add(TimerStarted(60))
+            : context.read<TimerBloc>().add(TimerResumed());
       },
     );
   }
+
   Widget pauseButton(BuildContext context) {
     return FloatingActionButton(
       child: const Icon(Icons.pause),
@@ -182,6 +198,7 @@ class Actions extends StatelessWidget {
       },
     );
   }
+
   Widget resetButton(BuildContext context) {
     return FloatingActionButton(
       child: const Icon(Icons.replay),
@@ -195,14 +212,14 @@ class Actions extends StatelessWidget {
       builder: (context, state) {
         var buttons = [];
         if (state.runtimeType == TimerInitial) {
-          buttons.add(playButton(context));
+          buttons.add(playButton(context, state));
         }
         if (state.runtimeType == TimerRunInProgress) {
           buttons.add(pauseButton(context));
           buttons.add(resetButton(context));
         }
         if (state.runtimeType == TimerRunPaused) {
-          buttons.add(playButton(context));
+          buttons.add(playButton(context, state));
           buttons.add(resetButton(context));
         }
 
