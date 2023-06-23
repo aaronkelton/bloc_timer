@@ -102,6 +102,12 @@ class TimerResumed extends TimerEvent {
   TimerResumed();
 }
 
+class TimerReset extends TimerEvent {
+  final int duration;
+
+  TimerReset(this.duration);
+}
+
 class _TimerTicked extends TimerEvent {
   final int duration;
 
@@ -113,6 +119,7 @@ class TimerBloc extends Bloc<TimerEvent, TimerState> {
     on<TimerStarted>(_onStarted);
     on<TimerPaused>(_onPaused);
     on<TimerResumed>(_onResumed);
+    on<TimerReset>(_onReset);
     on<_TimerTicked>(_onTicked);
   }
 
@@ -142,6 +149,11 @@ class TimerBloc extends Bloc<TimerEvent, TimerState> {
   _onResumed(event, emit) {
     emit(TimerRunInProgress(state.duration));
     _tickerSubscription?.resume();
+  }
+
+  _onReset(event, emit) {
+    emit(TimerInitial(60));
+    _tickerSubscription?.cancel();
   }
 
   _onTicked(event, emit) {
@@ -213,7 +225,9 @@ class Actions extends StatelessWidget {
   Widget resetButton(BuildContext context) {
     return FloatingActionButton(
       child: const Icon(Icons.replay),
-      onPressed: () {},
+      onPressed: () {
+        context.read<TimerBloc>().add(TimerReset(60));
+      },
     );
   }
 
