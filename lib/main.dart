@@ -145,7 +145,11 @@ class TimerBloc extends Bloc<TimerEvent, TimerState> {
   }
 
   _onTicked(event, emit) {
-    emit(TimerRunInProgress(event.duration));
+    if (event.duration > 0) {
+      emit(TimerRunInProgress(event.duration));
+    } else {
+      emit(TimerRunComplete());
+    }
   }
 }
 
@@ -174,6 +178,13 @@ class TimerRunPaused extends TimerState {
 
   @override
   String toString() => 'TimerRunPaused { duration: $duration }';
+}
+
+class TimerRunComplete extends TimerState {
+  TimerRunComplete() : super(0);
+
+  @override
+  String toString() => 'TimerRunComplete { duration: $duration }';
 }
 
 class Actions extends StatelessWidget {
@@ -220,6 +231,9 @@ class Actions extends StatelessWidget {
         }
         if (state.runtimeType == TimerRunPaused) {
           buttons.add(playButton(context, state));
+          buttons.add(resetButton(context));
+        }
+        if (state.runtimeType == TimerRunComplete) {
           buttons.add(resetButton(context));
         }
 
