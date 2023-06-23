@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:bloc_timer/ticker.dart';
+import 'package:bloc_timer/timer_observer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 void main() {
+  Bloc.observer = TimerObserver();
   runApp(const App());
 }
 
@@ -88,6 +90,12 @@ class TimerStarted extends TimerEvent {
 
   TimerStarted(this.duration);
 }
+class TimerPaused extends TimerEvent {
+  // this event doesn't accept a duration !!!
+  // so I guess we don't need to pass the duration from UI to the event space
+  // this is because we have access to the duration via state inside the Bloc
+  TimerPaused();
+}
 
 class _TimerTicked extends TimerEvent {
   final int duration;
@@ -98,6 +106,7 @@ class _TimerTicked extends TimerEvent {
 class TimerBloc extends Bloc<TimerEvent, TimerState> {
   TimerBloc() : super(TimerInitial(60)) {
     on<TimerStarted>(_onStarted);
+    on<TimerPaused>(_onPaused);
     on<_TimerTicked>(_onTicked);
   }
 
@@ -119,6 +128,11 @@ class TimerBloc extends Bloc<TimerEvent, TimerState> {
         .listen((duration) => add(_TimerTicked(duration)));
   }
 
+  _onPaused(event, emit) {
+    emit(TimerRunPaused(state.duration));
+    _tickerSubscription?.pause();
+  }
+
   _onTicked(event, emit) {
     emit(TimerRunInProgress(event.duration));
   }
@@ -136,12 +150,17 @@ class TimerInitial extends TimerState {
   @override
   String toString() => 'TimerInitial { duration: $duration }';
 }
-
 class TimerRunInProgress extends TimerState {
   TimerRunInProgress(super.duration);
 
   @override
   String toString() => 'TimerRunInProgress { duration: $duration }';
+}
+class TimerRunPaused extends TimerState {
+  TimerRunPaused(super.duration);
+
+  @override
+  String toString() => 'TimerRunPaused { duration: $duration }';
 }
 
 class Actions extends StatelessWidget {
@@ -158,7 +177,9 @@ class Actions extends StatelessWidget {
   Widget pauseButton(BuildContext context) {
     return FloatingActionButton(
       child: const Icon(Icons.pause),
-      onPressed: () {},
+      onPressed: () {
+        context.read<TimerBloc>().add(TimerPaused());
+      },
     );
   }
   Widget resetButton(BuildContext context) {
