@@ -15,6 +15,7 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('building material app');
     return MaterialApp(
       title: 'Flutter Timer',
       theme: ThemeData(
@@ -36,6 +37,7 @@ class TimerPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('building timer view');
     return const TimerView();
   }
 }
@@ -45,6 +47,7 @@ class TimerView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('building scaffold');
     return Scaffold(
       appBar: AppBar(title: const Text('Flutter Timer')),
       body: const Stack(
@@ -73,6 +76,7 @@ class TimerText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final duration = context.select((TimerBloc bloc) => bloc.state.duration);
+    print('building the Timer Text: $duration');
     final minutesStr =
         ((duration / 60) % 60).floor().toString().padLeft(2, '0');
     final secondsStr = (duration % 60).floor().toString().padLeft(2, '0');
@@ -103,9 +107,7 @@ class TimerResumed extends TimerEvent {
 }
 
 class TimerReset extends TimerEvent {
-  final int duration;
-
-  TimerReset(this.duration);
+  TimerReset();
 }
 
 class _TimerTicked extends TimerEvent {
@@ -115,7 +117,7 @@ class _TimerTicked extends TimerEvent {
 }
 
 class TimerBloc extends Bloc<TimerEvent, TimerState> {
-  TimerBloc() : super(TimerInitial(60)) {
+  TimerBloc() : super(TimerInitial(_duration)) {
     on<TimerStarted>(_onStarted);
     on<TimerPaused>(_onPaused);
     on<TimerResumed>(_onResumed);
@@ -126,6 +128,7 @@ class TimerBloc extends Bloc<TimerEvent, TimerState> {
   StreamSubscription<int>? _tickerSubscription;
 
   final Ticker _ticker = const Ticker();
+  static const int _duration = 60;
 
   // @override
   // Future<void> close() {
@@ -137,7 +140,7 @@ class TimerBloc extends Bloc<TimerEvent, TimerState> {
     emit(TimerRunInProgress(event.duration));
     _tickerSubscription?.cancel();
     _tickerSubscription = _ticker
-        .tick(ticks: 60)
+        .tick(ticks: _duration)
         .listen((duration) => add(_TimerTicked(duration)));
   }
 
@@ -152,7 +155,7 @@ class TimerBloc extends Bloc<TimerEvent, TimerState> {
   }
 
   _onReset(event, emit) {
-    emit(TimerInitial(60));
+    emit(TimerInitial(_duration));
     _tickerSubscription?.cancel();
   }
 
@@ -166,9 +169,12 @@ class TimerBloc extends Bloc<TimerEvent, TimerState> {
 }
 
 class TimerState {
+  TimerState(this.duration);
   final int duration;
 
-  TimerState(this.duration);
+  // the app run just fine without this equatable override!
+  // @override
+  // List<Object> get props => [duration];
 }
 
 class TimerInitial extends TimerState {
@@ -178,6 +184,13 @@ class TimerInitial extends TimerState {
   String toString() => 'TimerInitial { duration: $duration }';
 }
 
+class TimerRunPaused extends TimerState {
+  TimerRunPaused(super.duration);
+
+  @override
+  String toString() => 'TimerRunPaused { duration: $duration }';
+}
+
 class TimerRunInProgress extends TimerState {
   TimerRunInProgress(super.duration);
 
@@ -185,12 +198,6 @@ class TimerRunInProgress extends TimerState {
   String toString() => 'TimerRunInProgress { duration: $duration }';
 }
 
-class TimerRunPaused extends TimerState {
-  TimerRunPaused(super.duration);
-
-  @override
-  String toString() => 'TimerRunPaused { duration: $duration }';
-}
 
 class TimerRunComplete extends TimerState {
   TimerRunComplete() : super(0);
@@ -207,7 +214,7 @@ class Actions extends StatelessWidget {
       child: const Icon(Icons.play_arrow),
       onPressed: () {
         state.runtimeType == TimerInitial
-            ? context.read<TimerBloc>().add(TimerStarted(60))
+            ? context.read<TimerBloc>().add(TimerStarted(state.duration))
             : context.read<TimerBloc>().add(TimerResumed());
       },
     );
@@ -226,14 +233,17 @@ class Actions extends StatelessWidget {
     return FloatingActionButton(
       child: const Icon(Icons.replay),
       onPressed: () {
-        context.read<TimerBloc>().add(TimerReset(60));
+        context.read<TimerBloc>().add(TimerReset());
       },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    print('building the action buttons');
     return BlocBuilder<TimerBloc, TimerState>(
+      // we actually don't even need buildWhen because our states are class-based???
+      buildWhen: (prev, state) => prev.runtimeType != state.runtimeType,
       builder: (context, state) {
         var buttons = [];
         if (state.runtimeType == TimerInitial) {
@@ -267,6 +277,7 @@ class Background extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('building the background');
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
